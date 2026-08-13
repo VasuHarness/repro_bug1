@@ -1,0 +1,137 @@
+pipeline:
+  name: new_local
+  identifier: new_local
+  projectIdentifier: first
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: local
+        identifier: local
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: sas
+          environment:
+            environmentRef: testing_k8
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: harness_local
+          execution:
+            steps:
+              - stepGroup:
+                  name: Canary Deployment
+                  identifier: Canary_Deployment
+                  steps:
+                    - stepGroup:
+                        name: Canary-First Infra
+                        identifier: CanaryFirst_Infra
+                        when:
+                          stageStatus: Success
+                          condition: "false"
+                        steps:
+                          - step:
+                              type: K8sCanaryDeploy
+                              name: canary deploy first
+                              identifier: canary_deploy_first
+                              spec:
+                                skipDryRun: true
+                                instanceSelection:
+                                  type: Count
+                                  spec:
+                                    count: 1
+                              timeout: 10m
+                          - step:
+                              type: HarnessApproval
+                              name: HarnessApproval_1
+                              identifier: HarnessApproval_1
+                              spec:
+                                approvalMessage: Please review the following information and approve the pipeline progression
+                                includePipelineExecutionHistory: true
+                                isAutoRejectEnabled: false
+                                approvers:
+                                  userGroups:
+                                    - admin
+                                  minimumCount: 1
+                                  disallowPipelineExecutor: false
+                                approverInputs: []
+                              timeout: 1d
+                          - step:
+                              type: K8sCanaryDelete
+                              name: K8sCanaryDelete_1
+                              identifier: K8sCanaryDelete_1
+                              spec: {}
+                              timeout: 10m
+                    - step:
+                        type: HarnessApproval
+                        name: HarnessApproval_2
+                        identifier: HarnessApproval_2
+                        spec:
+                          approvalMessage: Please review the following information and approve the pipeline progression
+                          includePipelineExecutionHistory: true
+                          isAutoRejectEnabled: false
+                          approvers:
+                            userGroups:
+                              - admin
+                            minimumCount: 1
+                            disallowPipelineExecutor: false
+                          approverInputs: []
+                        timeout: 1d
+                    - stepGroup:
+                        name: canary second infra
+                        identifier: canary_second_infra
+                        steps:
+                          - step:
+                              type: K8sCanaryDeploy
+                              name: canary deploy second
+                              identifier: canary_deploy_second
+                              spec:
+                                skipDryRun: false
+                                instanceSelection:
+                                  type: Count
+                                  spec:
+                                    count: 1
+                              timeout: 10m
+                          - step:
+                              type: HarnessApproval
+                              name: HarnessApproval_3
+                              identifier: HarnessApproval_3
+                              spec:
+                                approvalMessage: Please review the following information and approve the pipeline progression
+                                includePipelineExecutionHistory: true
+                                isAutoRejectEnabled: false
+                                approvers:
+                                  userGroups:
+                                    - admin
+                                  minimumCount: 1
+                                  disallowPipelineExecutor: false
+                                approverInputs: []
+                              timeout: 1d
+                          - step:
+                              type: K8sCanaryDelete
+                              name: K8sCanaryDelete_2
+                              identifier: K8sCanaryDelete_2
+                              spec: {}
+                              timeout: 10m
+            rollbackSteps:
+              - step:
+                  name: Canary Delete
+                  identifier: rollbackCanaryDelete
+                  type: K8sCanaryDelete
+                  timeout: 10m
+                  spec: {}
+              - step:
+                  name: Rolling Rollback
+                  identifier: rollingRollback
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
