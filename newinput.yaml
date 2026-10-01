@@ -1,0 +1,15 @@
+inputSet:
+  name: newinput
+  tags: {}
+  identifier: newinput
+  orgIdentifier: default
+  projectIdentifier: vasu_test
+  pipeline:
+    identifier: testing
+    stages:
+      - stage:
+          identifier: deploy
+          type: Deployment
+          spec:
+            environment: {}
+  isInlineHCEntity: false
